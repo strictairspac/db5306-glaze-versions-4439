@@ -1,5 +1,5 @@
-from sqlalchemy import (JSON, Column, ForeignKey, Integer, MetaData, String,
-                        Table, Text)
+from sqlalchemy import (JSON, BigInteger, Column, ForeignKey, Integer,
+                        MetaData, String, Table, Text, UniqueConstraint)
 
 schema = MetaData()
 users = Table('accounts', schema,
@@ -11,7 +11,8 @@ cases = Table('business_cases', schema,
     Column('id', Integer, primary_key=True),
     Column('slug', String(64), nullable=False, unique=True),
     Column('title', String(120), nullable=False),
-    Column('payload', JSON, nullable=False),
+    Column('payload', JSON, nullable=True),
+    Column('archive_state', String(20), nullable=False, default='original', server_default='original'),
     Column('author', String(40), nullable=False),
     Column('created_at', String(32), nullable=False))
 runs = Table('business_runs', schema,
@@ -38,3 +39,27 @@ audit = Table('audit_events', schema,
     Column('action', String(32), nullable=False),
     Column('reference', String(50), nullable=False),
     Column('created_at', String(32), nullable=False))
+archive_jobs = Table('archive_jobs', schema,
+    Column('id', Integer, primary_key=True),
+    Column('case_id', ForeignKey('business_cases.id'), nullable=False, unique=True),
+    Column('status', String(20), nullable=False, index=True),
+    Column('manifest', JSON, nullable=False),
+    Column('segment_count', Integer, nullable=False),
+    Column('verified_count', Integer, nullable=False, default=0),
+    Column('error', Text),
+    Column('operator', String(40), nullable=False),
+    Column('created_at', String(32), nullable=False),
+    Column('updated_at', String(32), nullable=False),
+    Column('switched_at', String(32)))
+archive_segments = Table('archive_segments', schema,
+    Column('id', Integer, primary_key=True),
+    Column('case_id', ForeignKey('business_cases.id'), nullable=False, index=True),
+    Column('segment_index', Integer, nullable=False),
+    Column('first_seq', BigInteger, nullable=False),
+    Column('last_seq', BigInteger, nullable=False),
+    Column('content', JSON, nullable=False),
+    Column('digest', String(64), nullable=False),
+    Column('state', String(20), nullable=False),
+    Column('created_at', String(32), nullable=False),
+    Column('verified_at', String(32)),
+    UniqueConstraint('case_id', 'segment_index', name='uq_archive_segment'))

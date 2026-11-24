@@ -3,9 +3,9 @@ from sqlalchemy import text
 
 from src.config.settings import cache, engine
 from src.controllers.workflow import download
-from src.models.tables import audit, cases, evidence, runs
+from src.models.tables import audit, evidence, runs
 from src.schemas.workflow import CaseForm, LoginForm, ReviewForm
-from src.services import domain, workflow
+from src.services import archive, domain, workflow
 from src.services.security import current_user, login, operator, reviewer
 
 router = APIRouter()
@@ -31,12 +31,27 @@ def spec(_=Depends(current_user)):
 
 @router.get('/cases')
 def list_cases(_=Depends(current_user)):
-    return workflow.recent(cases)
+    return workflow.list_cases()
 
 
 @router.post('/cases', status_code=201)
 def create_case(form: CaseForm, actor=Depends(operator)):
     return workflow.make_case(form.title, form.payload, actor)
+
+
+@router.get('/archives')
+def list_archives(_=Depends(current_user)):
+    return archive.recent()
+
+
+@router.post('/cases/{case_id}/archive')
+def migrate_case(case_id: int, actor=Depends(operator)):
+    return archive.migrate(case_id, actor)
+
+
+@router.get('/cases/{case_id}/archive')
+def archive_status(case_id: int, _=Depends(current_user)):
+    return archive.status(case_id)
 
 
 @router.get('/runs')

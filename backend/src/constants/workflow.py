@@ -12,3 +12,19 @@ class Status(StrEnum):
     RUNNING = 'running'
     COMPLETE = 'complete'
     FAILED = 'failed'
+
+
+class Store(StrEnum):
+    ORIGINAL = 'original'
+    ARCHIVED = 'archived'
+
+
+class Archive(StrEnum):
+    MIGRATING = 'migrating'
+    SWITCHED = 'switched'
+    FAILED = 'failed'
+
+
+class Segment(StrEnum):
+    WRITTEN = 'written'
+    VERIFIED = 'verified'

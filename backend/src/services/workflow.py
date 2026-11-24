@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_, select
 from src.config.settings import cache, engine
 from src.constants.workflow import Status
 from src.models.tables import audit, cases, evidence, runs
-from src.services import domain
+from src.services import archive, domain
 from src.utils.encoding import canonical
 from src.utils.time import utc_time
 
@@ -19,6 +19,15 @@ def log(conn, actor, action, reference):
 def recent(table):
     with engine.connect() as conn:
         return [dict(row) for row in conn.execute(select(table).order_by(table.c.id.desc()).limit(100)).mappings()]
+
+
+def list_cases():
+    """档案目录：已迁存的档案在同一读快照里从迁存段整份复原。"""
+    with engine.connect() as conn:
+        rows = [dict(row) for row in conn.execute(select(cases).order_by(cases.c.id.desc()).limit(100)).mappings()]
+        for row in rows:
+            row['payload'] = archive.effective_payload(row, conn)
+        return rows
 
 
 def found(conn, table, identity):
@@ -73,7 +82,8 @@ def claim():
         token = str(uuid.uuid4())
         conn.execute(runs.update().where(runs.c.id == run.id).values(
             started_at=utc_time(), status=Status.RUNNING, attempt_token=token))
-        return run.id, token, found(conn, cases, run.case_id)['payload']
+        case = found(conn, cases, run.case_id)
+        return run.id, token, archive.effective_payload(case, conn)
 
 
 def finish(run_id, token, result=None, error=None):
